@@ -1,0 +1,425 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cloud Deployment Strategy: Databricks with GitHub Actions & Terraform</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-color: #1a1a2e;
+            --surface-color: #16213e;
+            --primary-color: #0f3460;
+            --accent-color: #e94560;
+            --text-color: #e0e0e0;
+            --subtle-text-color: #a0a0c0;
+            --border-color: #2a2a4a;
+            --white: #ffffff;
+            --shadow-color: rgba(0, 0, 0, 0.2);
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            line-height: 1.7;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        header {
+            text-align: center;
+            padding: 30px 20px;
+            background: linear-gradient(145deg, var(--primary-color), var(--bg-color));
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            margin-bottom: 30px;
+        }
+
+        header h1 {
+            margin: 0;
+            font-size: 2.8rem;
+            font-weight: 700;
+            color: var(--white);
+            letter-spacing: -1px;
+        }
+        
+        header p {
+            font-size: 1.2rem;
+            color: var(--subtle-text-color);
+            margin-top: 10px;
+            max-width: 700px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .main-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 25px;
+        }
+
+        .card {
+            background: var(--surface-color);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 25px;
+            box-shadow: 0 5px 20px var(--shadow-color);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 25px var(--shadow-color);
+        }
+
+        .card-header {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            font-size: 1.8rem;
+            font-weight: 700;
+            color: var(--white);
+            margin-bottom: 20px;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 15px;
+        }
+
+        .card-header svg {
+            width: 32px;
+            height: 32px;
+            fill: var(--accent-color);
+        }
+
+        h3 {
+            color: var(--accent-color);
+            font-size: 1.3rem;
+            margin-top: 25px;
+            margin-bottom: 15px;
+        }
+
+        ul {
+            list-style-type: none;
+            padding-left: 0;
+        }
+
+        ul li {
+            position: relative;
+            padding-left: 30px;
+            margin-bottom: 12px;
+            color: var(--subtle-text-color);
+        }
+
+        ul li::before {
+            content: '›';
+            position: absolute;
+            left: 10px;
+            color: var(--accent-color);
+            font-weight: bold;
+            font-size: 1.5rem;
+            top: -5px;
+        }
+
+        ul li strong {
+            color: var(--text-color);
+            font-weight: 500;
+        }
+
+        code {
+            background-color: var(--primary-color);
+            color: var(--accent-color);
+            padding: 3px 8px;
+            border-radius: 6px;
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 0.9em;
+        }
+
+        /* Data Flow Diagram */
+        .data-flow-container {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-wrap: wrap;
+            padding: 20px;
+            background-color: var(--primary-color);
+            border-radius: 8px;
+            margin-top: 15px;
+        }
+        .flow-item { text-align: center; margin: 10px; font-weight: 500; color: var(--text-color); }
+        .flow-box { padding: 12px 18px; border-radius: 6px; background-color: var(--surface-color); }
+        .flow-arrow { font-size: 1.8rem; color: var(--accent-color); margin: 0 10px; }
+        
+        /* Migration Timeline */
+        .timeline {
+            position: relative;
+            padding: 20px 0;
+            list-style: none;
+        }
+        .timeline::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            left: 20px;
+            width: 3px;
+            background: linear-gradient(to bottom, var(--accent-color), var(--primary-color));
+            border-radius: 3px;
+        }
+        .timeline li { padding-left: 60px; position: relative; margin-bottom: 30px; }
+        .timeline li::before {
+            content: attr(data-phase);
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: var(--surface-color);
+            color: var(--accent-color);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            border: 3px solid var(--accent-color);
+        }
+        .timeline h4 { font-weight: 700; color: var(--white); margin: 0 0 5px 0; }
+        .timeline p { margin: 0; color: var(--subtle-text-color); }
+        
+        /* Benefits & Risks */
+        .tab-container { margin-top: 20px; }
+        .tab-buttons { display: flex; border-bottom: 2px solid var(--border-color); }
+        .tab-buttons button {
+            padding: 12px 20px;
+            cursor: pointer;
+            border: none;
+            background-color: transparent;
+            font-size: 1rem;
+            font-weight: 500;
+            color: var(--subtle-text-color);
+            border-bottom: 3px solid transparent;
+            transition: all 0.3s ease;
+        }
+        .tab-buttons button.active { color: var(--accent-color); border-bottom-color: var(--accent-color); }
+        .tab-content { display: none; padding: 20px 5px; }
+        .tab-content.active { display: block; }
+        
+        .two-col-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+        }
+        .sub-card {
+            background: var(--primary-color);
+            padding: 20px;
+            border-radius: 8px;
+            border-left: 4px solid var(--accent-color);
+        }
+        .sub-card h4 { margin-top: 0; color: var(--white); }
+        .sub-card.risk { border-left-color: #f0ad4e; }
+        .sub-card.risk h4 { color: #f0ad4e; }
+        .sub-card ul li::before { content: '•'; color: var(--subtle-text-color); top: 0; }
+        
+        /* Responsive */
+        @media (min-width: 992px) {
+            .main-grid {
+                grid-template-columns: 1fr 1fr;
+            }
+            .full-width {
+                grid-column: 1 / -1;
+            }
+        }
+        @media (max-width: 768px) {
+            header h1 { font-size: 2rem; }
+            header p { font-size: 1rem; }
+            .card-header { font-size: 1.5rem; }
+            .card-header svg { width: 28px; height: 28px; }
+            .data-flow-container { flex-direction: column; }
+            .flow-arrow { transform: rotate(90deg); margin: 15px 0; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <header>
+            <h1>Cloud Deployment Strategy</h1>
+            <p>My approach on deploying this solution to the cloud with Databricks, GitHub Actions & Terraform</p>
+        </header>
+
+        <div class="main-grid">
+            <div class="card full-width">
+                <div class="card-header">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm-1-13h2v6h-2zm0 8h2v2h-2z"/></svg>
+                    <span>Overview</span>
+                </div>
+                <p>This document outlines my strategic approach for migrating the Gall & Gall POS data processing pipeline from legacy Docker containers to a cloud-native Databricks platform. The strategy emphasizes modern DevOps practices, including Infrastructure as Code (IaC) and CI/CD, to enhance scalability, efficiency, and maintainability.</p>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12.65 10C11.83 7.67 9.61 6 7 6c-3.31 0-6 2.69-6 6s2.69 6 6 6c2.61 0 4.83-1.67 5.65-4H17v4h4v-4h2v-4H12.65zM7 14c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2z"/></svg>
+                    <span>Target Architecture</span>
+                </div>
+                <h3>Core Components</h3>
+                <ul>
+                    <li><strong>Azure Databricks:</strong> Managed Spark platform.</li>
+                    <li><strong>ADLS Gen2:</strong> Scalable data lake (Bronze/Silver/Gold).</li>
+                    <li><strong>Unity Catalog:</strong> Centralized data governance.</li>
+                    <li><strong>Azure Key Vault:</strong> Secure secret management.</li>
+                    <li><strong>GitHub Actions:</strong> CI/CD pipeline automation.</li>
+                    <li><strong>Terraform:</strong> Infrastructure as Code management.</li>
+                </ul>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 6h-8l-2-2H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2zm-5 6h-2v2h-2v-2H9V8h2V6h2v2h2v4z"/></svg>
+                    <span>Data Flow</span>
+                </div>
+                <div class="data-flow-container">
+                    <div class="flow-item"><div class="flow-box">POS Systems</div></div>
+                    <div class="flow-arrow">→</div>
+                    <div class="flow-item"><div class="flow-box">ADLS Raw</div></div>
+                    <div class="flow-arrow">→</div>
+                    <div class="flow-item"><div class="flow-box">Databricks</div></div>
+                    <div class="flow-arrow">→</div>
+                    <div class="flow-item"><div class="flow-box">ADLS Curated</div></div>
+                    <div class="flow-arrow">→</div>
+                    <div class="flow-item"><div class="flow-box">Analytics/BI</div></div>
+                </div>
+            </div>
+
+            <div class="card full-width">
+                <div class="card-header">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20.54 5.23l-1.39-1.68C18.88 3.21 18.47 3 18 3H6c-.47 0-.88.21-1.16.55L3.46 5.23C3.17 5.57 3 6.02 3 6.5V19c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V6.5c0-.48-.17-.93-.46-1.27zM6.24 5h11.52l.83 1H5.41l.83-1zM5 19V8h14v11H5zm3-5h2v2H8zm4 0h4v2h-4z"/></svg>
+                    <span>DevOps Strategy</span>
+                </div>
+                <div class="two-col-grid">
+                    <div>
+                        <h3>Source Control & GitOps</h3>
+                        <ul>
+                            <li><strong>GitHub Repository:</strong> Single source of truth.</li>
+                            <li><strong>Branch Strategy:</strong> <code>feature</code> → <code>develop</code> → <code>main</code>.</li>
+                            <li><strong>GitOps Workflow:</strong> Changes via Pull Requests.</li>
+                        </ul>
+                    </div>
+                    <div>
+                        <h3>CI/CD Pipeline Architecture</h3>
+                        <ul>
+                            <li><strong>Infrastructure Pipeline:</strong> Terraform automation.</li>
+                            <li><strong>Application Pipeline:</strong> Databricks deployment.</li>
+                            <li><strong>Environment Strategy:</strong> Dev → Staging → Prod.</li>
+                            <li><strong>Testing Integration:</strong> Automated quality gates.</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="card full-width">
+                <div class="card-header">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 3h-4.18C14.4 1.84 13.3 1 12 1s-2.4.84-2.82 2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-7 0c.55 0 1 .45 1 1s-.45 1-1 1-1-.45-1-1 .45-1 1-1zm0 15l-5-5h3V9h4v4h3l-5 5z"/></svg>
+                    <span>Migration Approach</span>
+                </div>
+                <ol class="timeline">
+                    <li data-phase="1"><h4>Phase 1: Foundation Setup</h4><p>Establish GitHub repo, configure Azure auth, and deploy base infrastructure with Terraform.</p></li>
+                    <li data-phase="2"><h4>Phase 2: Platform Migration</h4><p>Provision Databricks, migrate PySpark code to notebooks, and implement Delta Lake & Unity Catalog.</p></li>
+                    <li data-phase="3"><h4>Phase 3: Automation Implementation</h4><p>Build CI/CD workflows, set up automated testing, and configure monitoring and alerting.</p></li>
+                    <li data-phase="4"><h4>Phase 4: Production Transition</h4><p>Execute cutover, validate data, decommission legacy systems, and train the team.</p></li>
+                </ol>
+            </div>
+
+            <div class="card full-width">
+                <div class="card-header">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
+                    <span>Benefits & Value Proposition</span>
+                </div>
+                 <div class="tab-container">
+                    <div class="tab-buttons">
+                        <button class="tab-button active" data-tab="ops">Operational Excellence</button>
+                        <button class="tab-button" data-tab="dev">Developer Productivity</button>
+                        <button class="tab-button" data-tab="cost">Cost Optimization</button>
+                        <button class="tab-button" data-tab="security">Security & Compliance</button>
+                    </div>
+
+                    <div id="ops" class="tab-content active">
+                        <div class="two-col-grid">
+                            <div class="sub-card"><h4>Reduced Overhead</h4><ul><li>Managed platform eliminates container orchestration complexity.</li></ul></div>
+                            <div class="sub-card"><h4>Automated Scaling</h4><ul><li>Dynamic resource allocation based on workload demands.</li></ul></div>
+                        </div>
+                    </div>
+                    <div id="dev" class="tab-content">
+                        <div class="two-col-grid">
+                            <div class="sub-card"><h4>Streamlined Workflows</h4><ul><li>GitOps-based deployment and environment management.</li></ul></div>
+                            <div class="sub-card"><h4>Faster Cycles</h4><ul><li>Automated testing and deployment pipelines.</li></ul></div>
+                        </div>
+                    </div>
+                    <div id="cost" class="tab-content">
+                        <div class="two-col-grid">
+                             <div class="sub-card"><h4>Pay-as-you-Scale</h4><ul><li>Consumption-based pricing with auto-termination of clusters.</li></ul></div>
+                            <div class="sub-card"><h4>Resource Efficiency</h4><ul><li>Optimized cluster sizing and spot instance utilization.</li></ul></div>
+                        </div>
+                    </div>
+                    <div id="security" class="tab-content">
+                        <div class="two-col-grid">
+                            <div class="sub-card"><h4>Enterprise Security</h4><ul><li>Azure AD integration and role-based access control (RBAC).</li></ul></div>
+                            <div class="sub-card"><h4>Data Governance</h4><ul><li>Unity Catalog for centralized metadata and lineage tracking.</li></ul></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card full-width">
+                 <div class="card-header">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z"/></svg>
+                    <span>Risk Mitigation</span>
+                </div>
+                <div class="two-col-grid">
+                    <div class="sub-card risk">
+                        <h4>Technical Risks</h4>
+                        <ul>
+                            <li><strong>Complexity:</strong> Mitigated by a phased approach.</li>
+                            <li><strong>Performance:</strong> Addressed with load testing.</li>
+                            <li><strong>Consistency:</strong> Ensured via data validation.</li>
+                        </ul>
+                    </div>
+                    <div class="sub-card risk">
+                        <h4>Operational Risks</h4>
+                        <ul>
+                            <li><strong>Skills Gap:</strong> Managed via team training.</li>
+                            <li><strong>Vendor Lock-in:</strong> Reduced by portable formats.</li>
+                            <li><strong>Cost:</strong> Controlled with budget alerts.</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const tabButtons = document.querySelectorAll('.tab-button');
+            const tabContents = document.querySelectorAll('.tab-content');
+
+            tabButtons.forEach(button => {
+                button.addEventListener('click', () => {
+                    const tabId = button.getAttribute('data-tab');
+
+                    tabButtons.forEach(btn => btn.classList.remove('active'));
+                    tabContents.forEach(content => content.classList.remove('active'));
+
+                    button.classList.add('active');
+                    document.getElementById(tabId).classList.add('active');
+                });
+            });
+        });
+    </script>
+
+</body>
+</html>
