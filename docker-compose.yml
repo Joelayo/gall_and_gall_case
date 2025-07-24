@@ -1,0 +1,11 @@
+services:
+  spark-etl:
+    build: .
+    container_name: gall-and-gall-case
+    env_file:
+      - .env
+    volumes:
+      - ./output:/app/output
+    environment:
+      - SPARK_LOCAL_DIRS=/tmp/spark
+    command: ["python", "src/main.py"]
